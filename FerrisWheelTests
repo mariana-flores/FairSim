@@ -1,0 +1,137 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Device.Location;
+using System.Threading;
+
+namespace Rides.Wheels.FerrisWheel.Tests
+{
+    [TestClass()]
+    public class FerrisWheelTests
+    {
+        [TestMethod()]
+        public void StartTest()
+        {
+            FerrisWheel wheel = new FerrisWheel(10, 2, new GeoCoordinate(), 12);
+            bool success = wheel.Start();
+            Assert.IsTrue(success);
+            Assert.AreEqual(State.RUNNING, wheel.CurrentState);
+        }
+
+        [TestMethod()]
+        public void StopTest()
+        {
+            FerrisWheel wheel = new FerrisWheel(5.5, 3, new GeoCoordinate(), 7);
+            bool success = wheel.Stop();
+            Assert.IsTrue(success);
+            wheel.Start();
+            Assert.IsTrue(wheel.Stop());
+            Assert.AreEqual(State.STOPPED, wheel.CurrentState);
+        }
+
+        [TestMethod()]
+        public void getDistanceTraveledNoTimeTest()
+        {
+            FerrisWheel wheel = new FerrisWheel(10, 23, new GeoCoordinate(), 4);
+            var actual = wheel.getDistanceTraveled();
+            var expected = 0;
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod()]
+        public void getDistanceWithNullLocTest()
+        {
+            FerrisWheel wheel = new FerrisWheel(0, 0, new GeoCoordinate(), 0);
+            Cabin cabin = new Cabin();
+            var actual = wheel.getDistance(cabin, 0);
+            var expected = -1;
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod()]
+        public void FindCabinTest()
+        {
+            int cabinCount = 10;
+            FerrisWheel wheel = new FerrisWheel(22, 10, new GeoCoordinate(11, -11), cabinCount);
+            Assert.IsNull(wheel.FindCabin(-2));
+            Assert.IsNotNull(wheel.FindCabin(cabinCount - 1));
+        }
+
+        [TestMethod()]
+        public void getDistanceGroundOnlyTest()
+        {
+            double radius = 10, baseHeight = 5;
+            FerrisWheel wheel = new FerrisWheel(radius, baseHeight, new GeoCoordinate(38, 43), 1);
+            Cabin cabin = new Cabin();
+            cabin.Location = new Coordinate() { X = -3, Y = 4 };
+            double groundDistanceToCabin = 100;
+            var height = baseHeight + radius + cabin.Location.Y;
+            var expected = Math.Sqrt(Math.Pow(groundDistanceToCabin, 2) + Math.Pow(height, 2));
+            double distance = wheel.getDistance(cabin, groundDistanceToCabin);
+            Assert.AreEqual(expected, distance);
+        }
+
+        [TestMethod()]
+        public void getTimeEllapsedNoSecsTest()
+        {
+            FerrisWheel wheel = new FerrisWheel(10, 6, new GeoCoordinate(2, 2), 3);
+            double actual = wheel.getTotalTimeEllapsed();
+            double expected = 0;
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod()]
+        public void getDistanceWithAltitudeTest()
+        {
+            double radius = 1, baseHeight = 2, altitude = 50;
+            GeoCoordinate geoCord = new GeoCoordinate(-30, 13, 40);
+            FerrisWheel wheel = new FerrisWheel(radius, baseHeight, geoCord, 3);
+            Cabin cabin = new Cabin();
+            cabin.Location = new Coordinate() { X = 0, Y = 5 };
+            double groundDistanceToCabin = 234;
+            double altitudeDiff = geoCord.Altitude - altitude;
+            var height = baseHeight + radius + cabin.Location.Y + altitudeDiff;
+            var expected = Math.Sqrt(Math.Pow(groundDistanceToCabin, 2) + Math.Pow(height, 2));
+            double actual = wheel.getDistance(cabin, groundDistanceToCabin, altitude);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod()]
+        public void getDistanceTraveledSecondsTest()
+        {
+            double radius = 10, secondsEllapsed = 3;
+            FerrisWheel wheel = new FerrisWheel(radius, 5, new GeoCoordinate(45, 45), 8);
+            wheel.SecondsPerRevolution = 2;
+            var angleRad = (secondsEllapsed / wheel.SecondsPerRevolution) * 2 * Math.PI;
+            var distance = angleRad * radius;
+            Assert.AreEqual(distance, wheel.getDistanceTraveled(secondsEllapsed));
+        }
+
+        [TestMethod()]
+        public void getTimeForDistanceTest()
+        {
+            double distance = 20;
+            double radius = 7;
+            double secondsPerRevolution = 30;
+            double expectedTime  = distance / (2 * radius * Math.PI) * secondsPerRevolution;
+            FerrisWheel wheel = new FerrisWheel(radius, 32, new GeoCoordinate(23, -2), 6);
+            wheel.SecondsPerRevolution = secondsPerRevolution;
+            double actualTime = wheel.getTimeForDistance(distance);
+            Assert.AreEqual(expectedTime, actualTime);
+        }
+
+        [TestMethod()]
+        public void getDistanceBetweenCabinsTest()
+        {
+            double radius = 6;
+            Cabin cabin1 = new Cabin();
+            cabin1.Location = new Coordinate { X = -3, Y = 4 };
+            Cabin cabin2 = new Cabin();
+            cabin2.Location = new Coordinate { X = 0, Y = 6 };
+            FerrisWheel wheel = new FerrisWheel(radius, 9, new GeoCoordinate(33, 23), 4);
+            var actialDist = wheel.getDistanceBetweenCabins(cabin1, cabin2);
+            var expectedDist = Math.Sqrt(Math.Pow((cabin1.Location.X - cabin2.Location.X), 2) +
+                Math.Pow((cabin1.Location.Y - cabin2.Location.Y), 2));
+            Assert.AreEqual(expectedDist, actialDist);
+        }
+    }
+}
